@@ -12,7 +12,10 @@ spawn_solver(This, Collector) when ?is_puzzle(This), is_pid(Collector) ->
     %% Collector receives it before it receives our failed
     %% message, adjusts its count, and possibly finishes.
     Collector ! started,
-    limiter:run(limiter, fun () -> solve(This, Collector) end).
+    limiter:run(limiter,
+		fun () -> solve(This, Collector) end,
+		%% The spawned function dies when Collector dies.
+		Collector).
 
 %% Try to solve this Puzzle then report back solved or failed to the
 %% Collector, and possibly spawns further processes that also report
@@ -23,7 +26,7 @@ solve(This, Collector) when ?is_puzzle(This), is_pid(Collector) ->
     %% to guess and recurse.  We can distinguish by examining the
     %% unplaced position with the fewest possibilities remaining.
 
-    MinPosition = positions:min_by_possible_size(This#puzzle.positions),
+    MinPosition = puzzle:position_with_fewest_possibilities(This),
     Possible = position:get_possible(MinPosition),
 
     case Possible == undefined of

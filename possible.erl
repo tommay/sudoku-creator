@@ -8,7 +8,10 @@
 %% An object that maintains the possible digits for a position.
 
 new() ->
-    #possible{list = lists:seq(1, 9)}.
+    List = spud:sort_by(
+	     lists:seq(1, 9),
+	     fun (_E) -> rnd:uniform() end),
+    #possible{list = List}.
 
 remove(This, Digit) ->
     This#possible{list = lists:delete(Digit, This#possible.list)}.

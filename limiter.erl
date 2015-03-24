@@ -1,5 +1,5 @@
 -module(limiter).
--export([start/2, run/2]).
+-export([start/2, run/2, run/3]).
 
 -define(RUN, run).
 -define(RESULT, result).
@@ -21,6 +21,13 @@ start(Name, Permits) ->
 %%
 run(Name, Func) ->
     Name ! {self(), ?RUN, Func},
+    return_result(Name, Func).
+
+run(Name, Func, LinkTo) ->
+    Name ! {self(), ?RUN, {Func, LinkTo}},
+    return_result(Name, Func).
+
+return_result(Name, Func) ->
     receive
 	{Name, ?RESULT, true} ->
 	    ok;
@@ -30,16 +37,33 @@ run(Name, Func) ->
 
 loop(Name, Permits) ->
     receive
-	{Pid, ?RUN, Func} ->
+	{Pid, ?RUN, Msg} ->
 	    case Permits == 0 of
 		true ->
 		    Pid ! {Name, ?RESULT, false},
 		    loop(Name, Permits);
 		false ->
 		    Pid ! {Name, ?RESULT, true},
-		    monitor(process, spawn(Func)),
+		    run(Msg),
 		    loop(Name, Permits - 1)
 	    end;
 	{'DOWN', _Ref, process, _Pid, _Reason} ->
 	    loop(Name, Permits + 1)
+    end.
+
+run(Func) when is_function(Func) ->
+    monitor(process, spawn(fun () -> Func() end));
+run({Func, LinkTo}) when is_function(Func) ->
+    monitor(process, spawn(fun () -> link_and_call(LinkTo, Func) end)).
+
+link_and_call(LinkTo, Func) ->
+    %% The LinkTo process may already have exited in which case we
+    %% shouldn't run.  So catch that error and return without calling
+    %% Func.
+    try link(LinkTo) of
+	true ->
+	    Func()
+    catch
+	error: noproc ->
+	    ok
     end.

@@ -10,16 +10,17 @@
 -export([parallel_min_by/2, parallel_max_by/2]).
 -export([parallel_min_by/3, parallel_max_by/3]).
 -export([array_min_by/2, tuple_min_by/2]).
--export([find/2, product/2]).
+-export([map_find/2, product/2, sort_by/2]).
 -export([format/2, debug/1, debug/2]).
 
 %% Some handy utility functions.
 
-%% Returns a random sample from the List, using random:uniform/1 which
-%% uses the process dictionary for state.
+%% Returns a random sample from the List.
 %%
-sample(List) ->
-    lists:nth(random:uniform(length(List)), List).
+sample(List) when is_list(List) ->
+    lists:nth(rnd:uniform(length(List)), List);
+sample(Tuple) when is_tuple(Tuple) ->
+    element(rnd:uniform(size(Tuple)), Tuple).
 
 %% Returns a list containing elements each containing N elements from
 %% the original list.
@@ -272,12 +273,12 @@ tuple_foldl(Func, Accum, Tuple, N) ->
 %% Calls Func on each element of the list and returns the first
 %% non-false result, or false if all results are false.
 %%
-find([], _Func) ->
+map_find([], _Func) ->
     false;
-find([H | T], Func) ->
+map_find([H | T], Func) ->
     case Func(H) of
 	false ->
-	    find(T, Func);
+	    map_find(T, Func);
 	Result ->
 	    Result
     end.
@@ -286,6 +287,13 @@ find([H | T], Func) ->
 %%    
 product(As, Bs) ->
     [{A, B} ||  A <- As, B <- Bs].
+
+%% Returns List with sort keys created by applying Func to each element.
+%%
+sort_by(List, Func) ->
+    Augmented = [{Func(E), E} || E <- List],
+    Sorted = lists:sort(Augmented),
+    [E || {_, E} <- Sorted].
 
 %% Returns a string with Data formatted by Format.
 %%
