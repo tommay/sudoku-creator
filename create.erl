@@ -44,7 +44,7 @@ create_from(Puzzle, Position, SymmetricPosition) ->
 
 check(Puzzle) ->
     io:format("~p Checking:~n~s~n", [self(), puzzle:to_puzzle(Puzzle)]),
-    case solution_count(Puzzle) of
+    case length(get_solutions(Puzzle, 2)) of
 	0 ->
 	    io:format("~p No solutions.~n", [self()]),
 	    false;				% Keep looking.
@@ -56,27 +56,26 @@ check(Puzzle) ->
 	    create_from(Puzzle)			% Look deeper.
     end.
 
-%% Returns the number of solutions the Puzzle has: 0, 1, or more.
-%% This could be parallelized.  As soon as we get 2 solutions we're
-%% done.  All the Solver processes link to Collector so they die when
-%% Collector dies.  Counter runs in a separate process so it can die
-%% and be cleaned up along with its mailbox once we know the answer.
-%% Counter and Collector are linked so when Counter does
-%% exit(intentional_crash) Collector (and everything else) die.
+%% Returns solutions of Puzzle, up to Max number of solutions.  If Max
+%% is 1, we can tell whether Puzzle has a solution, and get a
+%% solution.  If Max is 2 we can tell whether Puzzle has multiple
+%% solutions.  As soon as we get Max solutions we're done; Counter
+%% messages us (Main) the result and exits abnormally which takes down
+%% Collector which takes down all the Solvers linked to it.
 %%
-solution_count(Puzzle) ->
+get_solutions(Puzzle, Max) ->
     Main = self(),
 
     %% Self/Main waits for a message from Counter.
 
     Counter = spawn(fun () ->
-			    Main ! count_solutions(0),
-			    exit(intentional_crash)
+			    Main ! get_solutions_loop(Max, []),
+			    exit(done)
 		    end),
 
     %% Counter waits for messages from Collector/Yield.
 
-    Yield = fun (_Puzzle) -> Counter ! solved end,
+    Yield = fun (Solution) -> Counter ! {solved, Solution} end,
     Collector = spawn(fun () ->
 			      %% Kill the Collector (and Solvers) when
 			      %% Counter exits.
@@ -91,15 +90,14 @@ solution_count(Puzzle) ->
 
     %% Self/Main waits here.
 
-    receive N -> N end.
+    receive Solutions -> Solutions end.
 
-%% Only bother counting to 2.
-count_solutions(2) ->
-    2;
-count_solutions(N) ->
+get_solutions_loop(0, Solutions) ->
+    Solutions;
+get_solutions_loop(Remaining, Solutions) ->
     receive
-	solved ->
-	    count_solutions(N + 1);
+	{solved, Puzzle} ->
+	    get_solutions_loop(Remaining - 1, [Puzzle | Solutions]);
 	done ->
-	    N
+	    Solutions
     end.
