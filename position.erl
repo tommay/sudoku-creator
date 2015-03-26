@@ -49,7 +49,7 @@ not_possible(This, Digit) when ?is_position(This) ->
     case This#position.possible of
 	undefined ->
 	    This;
-	Possible = _ ->
+	Possible ->
 	    This#position{possible = possible:remove(Possible, Digit)}
     end.
 

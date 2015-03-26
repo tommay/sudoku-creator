@@ -76,7 +76,7 @@ receive_solutions(Pending, Yield) ->
 	failed ->
 	    stats:failed(),
 	    maybe_receive_solutions(Pending - 1, Yield);
-	Msg = _ ->
+	Msg ->
 	    io:format("wtf: ~p~n", [Msg]),
 	    receive_solutions(Pending, Yield)
     end.
