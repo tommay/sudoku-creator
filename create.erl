@@ -7,7 +7,10 @@ start() ->
     stuff:start(),
     rnd:start(),
     Puzzle = create(),
-    puzzle:print_puzzle(Puzzle).
+    puzzle:print_puzzle(Puzzle),
+    stats:reset(),
+    get_solutions(Puzzle, 1000000),
+    io:format("stats: ~s~n", [stats:to_string(stats:get())]).
 
 create() ->
     %% Create a solved Puzzle by getting a random solution to an empty Puzzle.

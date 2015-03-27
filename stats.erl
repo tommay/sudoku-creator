@@ -1,5 +1,5 @@
 -module(stats).
--export([start/0, spawned/0, solved/0, failed/0, get/0, to_string/1]).
+-export([start/0, spawned/0, solved/0, failed/0, reset/0, get/0, to_string/1]).
 
 -record(stats, {spawned = 0, solved = 0, failed = 0, current = 0, max = 0}).
 
@@ -15,6 +15,7 @@ start() ->
 ?send(spawned).
 ?send(solved).
 ?send(failed).
+?send(reset).
 
 get() ->
     stats ! {self(), get},
@@ -41,6 +42,8 @@ loop(This) ->
 	failed ->
 	    Tracked = track(This, -1),
 	    loop(?increment(Tracked, failed));
+	reset ->
+	    loop(#stats{});
 	{Pid, get} ->
 	    Pid ! This,
 	    loop(This)
