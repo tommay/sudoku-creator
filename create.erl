@@ -6,55 +6,44 @@ start() ->
     stats:start(),
     stuff:start(),
     rnd:start(),
-    Puzzle = puzzle:new(),
-    create_from(Puzzle).
+    Puzzle = create(),
+    puzzle:print_puzzle(Puzzle).
 
-create_from(Puzzle) ->
-    Position = puzzle:random_unplaced_position(Puzzle),
-    SymmetricPosition = puzzle:symmetric_position(Puzzle, Position),
-    case SymmetricPosition of
-	none ->
-	    create_from(Puzzle, Position);
-	_ ->
-	    create_from(Puzzle, Position, SymmetricPosition)
-    end.
+create() ->
+    %% Create a solved Puzzle by getting a random solution to an empty Puzzle.
+    [Solved | _] = get_solutions(puzzle:new(), 1),
+    puzzle:print_puzzle(Solved),
+    io:format("stats: ~s~n", [stats:to_string(stats:get())]),
+    SolvedString = puzzle:to_string(Solved),
+    %% Randomly eliminate symmetric positions and make sure the puzzle
+    %% remains solvable with a single solution.  Not so awesome.
+    Numbers = spud:sort_by(
+		lists:seq(1, 41),
+		fun (_) -> rnd:uniform() end),
+    PuzzleString = 
+	lists:foldl(
+	  fun (Number, String) ->
+		  NewString = eliminate_symmetric(String, Number),
+		  Puzzle = puzzle:new(NewString),
+		  case length(get_solutions(Puzzle, 2)) of
+		      0 -> String;
+		      1 -> NewString;
+		      2 -> String
+		  end
+	  end,
+	  SolvedString,
+	  Numbers),
+    puzzle:new(PuzzleString).
 
-create_from(Puzzle, Position) ->
-    Digits = possible:to_list(position:get_possible(Position)),
-    spud:map_find(
-      Digits,
-      fun (D) ->
-	      Puzzle2 = puzzle:place(
-			  Puzzle, position:get_number(Position), D),
-	      check(Puzzle2)
-      end).
+eliminate_symmetric(String, 41) ->
+    eliminate(String, 41);
+eliminate_symmetric(String, N) ->
+    eliminate(
+      eliminate(String, N),
+      82 - N).
 
-create_from(Puzzle, Position, SymmetricPosition) ->
-    Digits =
-	spud:product(
-	  possible:to_list(position:get_possible(Position)),
-	  possible:to_list(position:get_possible(SymmetricPosition))),
-    spud:map_find(
-      Digits,
-      fun ({A, B}) ->
-	      Puzzle2 = puzzle:place(Puzzle, position:get_number(Position), A),
-	      Puzzle3 = puzzle:place(Puzzle2, position:get_number(SymmetricPosition), B),
-	      check(Puzzle3)
-      end).
-
-check(Puzzle) ->
-    io:format("~p Checking:~n~s~n", [self(), puzzle:to_puzzle(Puzzle)]),
-    case length(get_solutions(Puzzle, 2)) of
-	0 ->
-	    io:format("~p No solutions.~n", [self()]),
-	    false;				% Keep looking.
-	1 ->
-	    io:format("~p One solution!~n", [self()]),
-	    Puzzle;				% Created a puzzle.
-	_ ->
-	    io:format("~p Multiple solutions . . .~n", [self()]),
-	    create_from(Puzzle)			% Look deeper.
-    end.
+eliminate(String, N) ->
+    tuple_to_list(setelement(N, list_to_tuple(String), $-)).
 
 %% Returns solutions of Puzzle, up to Max number of solutions.  If Max
 %% is 1, we can tell whether Puzzle has a solution, and get a

@@ -1,8 +1,8 @@
 -module(puzzle).
 -include("puzzle.hrl").
 -export([new/0, new/1, position_with_fewest_possibilities/1,
-	 random_unplaced_position/1, symmetric_position/2,
-	 place/3, foreach_solution/2, to_puzzle/1, print_puzzle/1]).
+	 place/3, foreach_solution/2, to_string/1, to_puzzle/1,
+	 print_puzzle/1]).
 
 %% Returns a new Puzzle with empty Positions.
 %%
@@ -44,16 +44,6 @@ to_digits(Setup) ->
 %%
 position_with_fewest_possibilities(This) when ?is_puzzle(This) ->
     positions:min_by_possible_size(This#puzzle.positions).
-
-%%
-random_unplaced_position(This) ->
-    positions:random_unplaced_position(This#puzzle.positions).
-
-%% Returns the Position wihch is symmetric across the center of the board.
-%% Used to build symmetric puzzles.  Returns none for the center Position.
-%%
-symmetric_position(This, Position) when ?is_puzzle(This) ->
-    positions:symmetric_position(This#puzzle.positions, Position).
 
 %% Returns a new Puzzle with Digit placed at Position AtNumber.  The
 %% possible sets of all Positions are updated to account for the new

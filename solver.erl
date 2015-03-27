@@ -50,7 +50,7 @@ solve(This, Collector) when ?is_puzzle(This), is_pid(Collector) ->
 	    end
     end.
 
-%% If this is the last guess then just recurse in thie process.  If
+%% If this is the last guess then just recurse in this process.  If
 %% there are more guesses to make then spawn a solver for this one.
 %%
 do_guesses(This, Collector, Number, [Digit]) ->

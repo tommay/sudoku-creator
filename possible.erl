@@ -10,7 +10,7 @@
 new() ->
     List = spud:sort_by(
 	     lists:seq(1, 9),
-	     fun (_E) -> rnd:uniform() end),
+	     fun (_) -> rnd:uniform() end),
     #possible{list = List}.
 
 remove(This, Digit) ->
