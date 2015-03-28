@@ -1,5 +1,7 @@
 -module(stats).
--export([start/0, spawned/0, solved/0, failed/0, reset/0, get/0, to_string/1]).
+-export([start/0, spawned/0, solved/0, failed/0, reset/0, get/0,
+	 get_spawned/0, to_string/1]).
+-compile({no_auto_import,[get/0]}).
 
 -record(stats, {spawned = 0, solved = 0, failed = 0, current = 0, max = 0}).
 
@@ -48,6 +50,9 @@ loop(This) ->
 	    Pid ! This,
 	    loop(This)
     end.
+
+get_spawned() ->
+    (get())#stats.spawned.
 
 to_string(This) ->
     spud:format("spawned: ~w solved: ~w failed: ~w max: ~w",

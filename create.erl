@@ -6,11 +6,20 @@ start() ->
     stats:start(),
     stuff:start(),
     rnd:start(),
+    create_with_no_guessing().
+
+create_with_no_guessing() ->
     Puzzle = create(),
     puzzle:print_puzzle(Puzzle),
     stats:reset(),
     get_solutions(Puzzle, 1000000),
-    io:format("stats: ~s~n", [stats:to_string(stats:get())]).
+    io:format("stats: ~s~n", [stats:to_string(stats:get())]),
+    case stats:get_spawned() of
+	1 ->
+	    ok;
+	_ ->
+	    create_with_no_guessing()
+    end.
 
 create() ->
     %% Create a solved Puzzle by getting a random solution to an empty Puzzle.
