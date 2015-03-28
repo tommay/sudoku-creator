@@ -1,7 +1,7 @@
 -module(puzzle).
 -include("puzzle.hrl").
--export([new/0, new/1, position_with_fewest_possibilities/1,
-	 place/3, foreach_solution/2, to_string/1, to_puzzle/1,
+-export([new/0, new/1, solve/2,
+	 place/3, to_string/1, to_puzzle/1,
 	 print_puzzle/1]).
 
 %% Returns a new Puzzle with empty Positions.
@@ -76,11 +76,48 @@ do_exclusions(Positions, Digit, ExclusionList) ->
       Positions,
       ExclusionList).
 
-%% Solve Puzzles and call Yield with each solved Puzzle.
+%% Try to solve this Puzzle and return up to Remaining possible solutions.
 %%
-foreach_solution(This, Yield) when ?is_puzzle(This), is_function(Yield) ->
-    solver:spawn_solver(This, self()),
-    solver:receive_solutions(Yield).
+solve(This, 0) when ?is_puzzle(This) ->
+    [];
+solve(This, Remaining) when ?is_puzzle(This) ->
+    %% We get here either because we're done, we've failed, or we have
+    %% to guess and recurse.  We can distinguish by examining the
+    %% unplaced position with the fewest possibilities remaining.
+
+    MinPosition = position_with_fewest_possibilities(This),
+    Possible = position:get_possible(MinPosition),
+
+    case Possible == undefined of
+	true ->
+            %% Solved.  Return This as a solution.
+	    stats:solved(),
+	    [This];
+	false ->
+	    case possible:size(Possible) of
+		0 ->
+		    %% Failed.  Return no solutions.
+		    stats:failed(),
+		    [];
+		_ ->
+		    %% Found an unplaced position with two or more
+		    %% possibilities.  Guess each possibility and
+		    %% recurse.
+		    stats:guess(),
+		    AtNumber = position:get_number(MinPosition),
+		    PossibleDigitList = possible:to_list(Possible),
+		    blah(This, AtNumber, Remaining, PossibleDigitList)
+	    end
+    end.
+
+blah(_This, _AtNumber, 0, _PossibleDigitList) ->
+    [];
+blah(_This, _AtNumber, _Remaining, []) ->
+    [];
+blah(This, AtNumber, Remaining, [PossibleDigit | T]) ->
+    Puzzle2 = puzzle:place(This, AtNumber, PossibleDigit),
+    Solutions = solve(Puzzle2, Remaining),
+    Solutions ++ blah(This, AtNumber, Remaining - length(Solutions), T).
 
 %% Returns a raw string of 81 digits and dashes, like the argument to new.
 %%

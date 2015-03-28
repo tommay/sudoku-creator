@@ -1,9 +1,9 @@
 -module(stats).
--export([start/0, spawned/0, solved/0, failed/0, reset/0, get/0,
-	 get_spawned/0, to_string/1]).
+-export([start/0, solved/0, failed/0, guess/0, reset/0, get/0,
+	 get_failed/0, to_string/1]).
 -compile({no_auto_import,[get/0]}).
 
--record(stats, {spawned = 0, solved = 0, failed = 0, current = 0, max = 0}).
+-record(stats, {solved = 0, failed = 0, guess = 0}).
 
 -define(increment(Rec, Field), Rec#stats{Field = Rec#stats.Field + 1}).
 -define(send(Type),
@@ -14,9 +14,9 @@ start() ->
     Pid = spawn(fun () -> loop(#stats{}) end),
     register(stats, Pid).
 
-?send(spawned).
 ?send(solved).
 ?send(failed).
+?send(guess).
 ?send(reset).
 
 get() ->
@@ -26,24 +26,14 @@ get() ->
 	    Stats
     end.
 
-track(This, Inc) ->
-    Current = This#stats.current + Inc,
-    case Current > This#stats.max of
-	true -> This#stats{current = Current, max = Current};
-	false -> This#stats{current = Current}
-    end.
-
 loop(This) ->
     receive
-	spawned ->
-	    Tracked = track(This, +1),
-	    loop(?increment(Tracked, spawned));
 	solved ->
-	    Tracked = track(This, -1),
-	    loop(?increment(Tracked, solved));
+	    loop(?increment(This, solved));
 	failed ->
-	    Tracked = track(This, -1),
-	    loop(?increment(Tracked, failed));
+	    loop(?increment(This, failed));
+	guess ->
+	    loop(?increment(This, guess));
 	reset ->
 	    loop(#stats{});
 	{Pid, get} ->
@@ -51,10 +41,9 @@ loop(This) ->
 	    loop(This)
     end.
 
-get_spawned() ->
-    (get())#stats.spawned.
+get_failed() ->
+    (get())#stats.failed.
 
 to_string(This) ->
-    spud:format("spawned: ~w solved: ~w failed: ~w max: ~w",
-		[This#stats.spawned, This#stats.solved, This#stats.failed,
-		 This#stats.max]).
+    spud:format("solved: ~w guess: ~w failed: ~w",
+		[This#stats.solved, This#stats.guess, This#stats.failed]).
