@@ -7,7 +7,14 @@ start() ->
     create_with_no_guessing().
 
 create_with_no_guessing() ->
-    Puzzle = create(),
+    %% Create a solved Puzzle by getting a random solution to an empty Puzzle.
+    [Solved | _] = puzzle:solve(puzzle:new(), 1),
+    puzzle:print_puzzle(Solved),
+    io:format("stats: ~s~n", [stats:to_string(stats:get())]),
+    create_with_no_guessing(Solved).
+
+create_with_no_guessing(Solved) ->
+    Puzzle = create_from(Solved),
     puzzle:print_puzzle(Puzzle),
     stats:reset(),
     puzzle:solve(Puzzle, 1000000),
@@ -16,14 +23,10 @@ create_with_no_guessing() ->
 	true ->
 	    ok;
 	false ->
-	    create_with_no_guessing()
+	    create_with_no_guessing(Solved)
     end.
 
-create() ->
-    %% Create a solved Puzzle by getting a random solution to an empty Puzzle.
-    [Solved | _] = puzzle:solve(puzzle:new(), 1),
-    puzzle:print_puzzle(Solved),
-    io:format("stats: ~s~n", [stats:to_string(stats:get())]),
+create_from(Solved) ->
     SolvedString = puzzle:to_string(Solved),
     %% Randomly eliminate symmetric positions and make sure the puzzle
     %% remains solvable with a single solution.  Not so awesome.
