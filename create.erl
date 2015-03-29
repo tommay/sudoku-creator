@@ -31,7 +31,7 @@ create_from(Solved) ->
     %% Randomly eliminate symmetric positions and make sure the puzzle
     %% remains solvable with a single solution.  Not so awesome.
     Numbers = spud:sort_by(
-		lists:seq(1, 41),
+		lists:seq(1, 81),
 		fun (_) -> rnd:uniform() end),
     PuzzleString = 
 	lists:foldl(
@@ -48,12 +48,17 @@ create_from(Solved) ->
 	  Numbers),
     puzzle:new(PuzzleString).
 
-eliminate_symmetric(String, 41) ->
-    eliminate(String, 41);
 eliminate_symmetric(String, N) ->
-    eliminate(
-      eliminate(String, N),
-      82 - N).
+    case (N - 1) rem 9 of
+	R when R < 4 ->
+	    eliminate(
+	      eliminate(String, N),
+	      N + (8 - R*2));
+	4 ->
+	    eliminate(String, N);
+	_ ->
+	    String
+    end.
 
 eliminate(String, N) ->
     tuple_to_list(setelement(N, list_to_tuple(String), $-)).
