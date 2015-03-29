@@ -60,21 +60,8 @@ place(This, AtNumber, Digit)
     %% Exclude Digit from excluded Positions.
     ExclusionList = exclusions:get_list_for_position(
 		      This#puzzle.exclusions, AtNumber),
-    Positions3 = do_exclusions(Positions2, Digit, ExclusionList),
+    Positions3 = positions:do_exclusions(Positions2, Digit, ExclusionList),
     This#puzzle{positions = Positions3}.
-
-do_exclusions(Positions, Digit, ExclusionList) ->
-    lists:foldl(
-      fun (Number, PositionsAccum) ->
-	      positions:update(
-		PositionsAccum,
-		Number,
-		fun (Position) ->
-			position:not_possible(Position, Digit)
-		end)
-      end,
-      Positions,
-      ExclusionList).
 
 %% Try to solve this Puzzle and return up to Remaining possible solutions.
 %%
