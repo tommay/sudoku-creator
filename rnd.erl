@@ -1,35 +1,24 @@
 -module(rnd).
--export([start/0, start/1, uniform/0, uniform/1]).
+-behaviour(gen_server).
 
-%% A random number server.
+-export([start/0, uniform/0, uniform/1]).
+-export([init/1, handle_call/3]).
 
 start() ->
-    start(now()).
+    gen_server:start({local, rnd}, ?MODULE, [], []).
 
-start(Seed) ->
-    Pid = spawn(fun () -> random:seed(Seed), loop() end),
-    register(rnd, Pid).
+init(_Args) ->
+    {ok, now()}.
 
 uniform() ->
-    rnd ! {self(), uniform},
-    receive_value().
+    gen_server:call(rnd, uniform).
 
 uniform(N) ->
-    rnd ! {self(), uniform, N},
-    receive_value().
+    gen_server:call(rnd, {uniform, N}).
 
-receive_value() ->
-    receive
-	{rnd, Value} ->
-	    Value
-    end.
-
-loop() ->			
-    receive
-	{From, uniform} ->
-	    From ! {rnd, random:uniform()},
-	    loop();
-	{From, uniform, N} ->
-	    From ! {rnd, random:uniform(N)},
-	    loop()
-    end.
+handle_call(uniform, _From, State) ->
+    {R, State2} = random:uniform_s(State),
+    {reply, R, State2};
+handle_call({uniform, N}, _From, State) ->
+    {R, State2} = random:uniform_s(N, State),
+    {reply, R, State2}.
