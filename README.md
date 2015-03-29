@@ -1,35 +1,31 @@
-sudoku
-======
+sudoku creator
+==============
 
-A little sudoku solver in Erlang.  This is sort of a port of my
-[sudoku solver](https://github.com/tommay/sudoku) done in various
-other languages (Ruby, JavaScript, CoffeeScript) but Erlang is a
-different beast entirely even for a Lisp hacker.  I've been learning a
-lot about how to do functional programming somewhat cleanly in Erlang
-with a module per "object", tagged values, etc.  Functional
-programming seems to demand a "tell, don't ask" style and violating
-the law of Demeter is right out.  So it should be a good influence on
-my designs in other languages.  At least I've been a fan of
-immutability for decades
+More fun with Erlang.  This time I'm creating sudoku puzzles.
 
-This finally works!  I made an escript executable that takes a filename
-and prints any solutions.
+The creator works by creating a random solution then removing random
+digits in the classic symmetric manner while checking that there is
+still only one possible solution.
 
-It's not clear whether I'll be sticking with some of my design
-approaches.  It's also strictly functional with no actors or
-concurrency.  I'll play with those later, probably when I add
-statistics of the various tachniques.
+The creator uses a simplified (non-concurrent) version of my sudoku solver
+to:
+* Create a solution by randomly finding a solution to an empty Puzzle.
+* Check that potential puzzles have exactly one solution.
 
-I've gotten quite comfortable with the pattern matching and like it a
-lot.  If we get this, do that.  If we get something else, do the other
-thing.  Give this piece of the arguments a name so we can use it
-later.
+The history has a version of the solver that uses linked processes so
+the solver can be easily shut down after enough solutions are found,
+but since at most two solutions ever need to be found I backed off and
+just do everything in-process and stop when enough solutions have been
+found.
 
-Somtimes it still feels weird to be writing functions that "don't do
-anything"; they just look at their arguments and return some new junk,
-often a slightly modified copy of itself.  It's like telling a dog to
-walk across the room, but instead of actually walking across the room
-it creates a new dog that's on the other side of the room and you use
-that dog instead.  And you still have the old dog on your side of the
-room, until you ignore it long enough and the garbage collector cleans
-it up.
+This is kind of fun because it can create puzzles with different
+symmetry than what you usually see.
+
+There is no attempt to grade the difficulty level of the puzzles.  As
+a simple heuristic, only puzzles that the solver can handle without
+guessing are returned.
+
+    $ git clone ...
+    $ cd sudoku-creator
+    $ make
+    $ ./create
