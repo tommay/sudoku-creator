@@ -1,49 +1,50 @@
 -module(stats).
--export([start/0, solved/0, failed/0, guess/0, reset/0, get/0,
-	 get_failed/0, to_string/1]).
+-behavior(gen_server).
+-export([start/0, solved/0, failed/0, guess/0, reset/0,
+	 get/0, get_failed/0, to_string/1]).
+-export([init/1, handle_call/3, handle_cast/2]).
 -compile({no_auto_import,[get/0]}).
 
 -record(stats, {solved = 0, failed = 0, guess = 0}).
 
--define(increment(Rec, Field), Rec#stats{Field = Rec#stats.Field + 1}).
--define(send(Type),
-	Type() ->
-	       stats ! Type).
+-define(cast(Msg),
+	Msg() ->
+	       gen_server:cast(stats, Msg)).
+-define(handle(Msg),
+	handle_cast(Msg, State) ->
+	       {noreply, ?increment(State, Msg)}).
+-define(increment(Rec, Field),
+	 Rec#stats{Field = Rec#stats.Field + 1}).
 
 start() ->
-    Pid = spawn(fun () -> loop(#stats{}) end),
-    register(stats, Pid).
+    gen_server:start({local, stats}, ?MODULE, [], []).
 
-?send(solved).
-?send(failed).
-?send(guess).
-?send(reset).
+init(_Args) ->
+    {ok, #stats{}}.
+
+?cast(solved).
+?cast(failed).
+?cast(guess).
+?cast(reset).
 
 get() ->
-    stats ! {self(), get},
-    receive
-	Stats when is_record(Stats, stats) ->
-	    Stats
-    end.
-
-loop(This) ->
-    receive
-	solved ->
-	    loop(?increment(This, solved));
-	failed ->
-	    loop(?increment(This, failed));
-	guess ->
-	    loop(?increment(This, guess));
-	reset ->
-	    loop(#stats{});
-	{Pid, get} ->
-	    Pid ! This,
-	    loop(This)
-    end.
+    gen_server:call(stats, get).
 
 get_failed() ->
-    (get())#stats.failed.
+    gen_server:call(stats, get_failed).
 
-to_string(This) ->
+
+?handle(solved);
+?handle(failed);
+?handle(guess);
+handle_cast(reset, _State) ->
+    {noreply, #stats{}}.
+
+handle_call(get, _From, State) ->
+    {reply, State, State};
+handle_call(get_failed, _From, State) ->
+    {reply, State#stats.failed, State}.
+
+to_string(Stats) ->
     spud:format("solved: ~w guess: ~w failed: ~w",
-		[This#stats.solved, This#stats.guess, This#stats.failed]).
+		[Stats#stats.solved, Stats#stats.guess, Stats#stats.failed]).
