@@ -1,4 +1,5 @@
 #!/usr/bin/env escript
+%%! -pa ebin
 
 %% escript:
 %% http://erlangcentral.org/frame/?href=http%3A%2F%2Fwww.erlang.org%2Fdoc%2Fman%2Fescript.html#.VOF5BS4YMvg

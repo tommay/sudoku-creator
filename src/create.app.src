@@ -1,0 +1,12 @@
+{application, create,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { create_app, []}},
+  {env, []}
+ ]}.
