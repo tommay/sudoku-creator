@@ -2,7 +2,7 @@
 -export([start/0]).
 
 start() ->
-    stats:start(),
+    stats:start_link(),
     rnd:start_link(),
     create_with_no_guessing().
 
