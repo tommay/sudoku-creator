@@ -13,6 +13,6 @@
 -export([main/1]).
 
 main([]) ->
-    create:start();
+    create:main();
 main(_) ->
     io:format("Usage: create~n").

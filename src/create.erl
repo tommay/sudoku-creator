@@ -1,7 +1,7 @@
 -module(create).
--export([start/0]).
+-export([main/0]).
 
-start() ->
+main() ->
     stats:start_link(),
     rnd:start_link(),
     create_with_no_guessing().
