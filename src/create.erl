@@ -2,7 +2,7 @@
 -export([main/0]).
 
 main() ->
-    stats:start_link(),
+    application:start(stats),
     application:start(rnd),
     create_with_no_guessing().
 
