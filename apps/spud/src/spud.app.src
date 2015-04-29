@@ -1,0 +1,14 @@
+{application, spud,
+ [
+  {description, "Functions tom@tommay.net has found useful."},
+  {vsn, "1.0.0"},
+  {modules, [
+             spud
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
