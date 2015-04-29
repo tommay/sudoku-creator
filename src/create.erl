@@ -3,7 +3,7 @@
 
 main() ->
     stats:start_link(),
-    rnd:start_link(),
+    application:start(rnd),
     create_with_no_guessing().
 
 create_with_no_guessing() ->

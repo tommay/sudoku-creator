@@ -1,0 +1,12 @@
+{application, rnd,
+ [
+  {description, ""},
+  {vsn, "1.0.0"},
+  {registered, [rnd]},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, {rnd_app, []}},
+  {env, []}
+ ]}.
