@@ -1,119 +1,121 @@
 -module(puzzle).
--include("puzzle.hrl").
--export([new/0, new/1, solve/2,
-	 place/3, to_string/1, to_puzzle/1,
-	 print_puzzle/1]).
+-export([create_random_puzzle/0, solve/1, solve/2, remove/2]).
+-export([to_puzzle_string/1]).
 
-%% Returns a new Puzzle with empty Positions.
+-include("puzzle.hrl").
+-include("unknown.hrl").
+
+%% Returns a new Puzzle with empty Cells.
 %%
 new() ->
-    #puzzle{positions = positions:new(),
-	    exclusions = exclusions:new()}.
+    #puzzle{
+       placed = [],
+       unknown = [unknown:new(N) || N <- lists:seq(0, 80)]
+      }.
 
-%% Returns a new Puzzle with each Position initialized according to
-%% Setup, which is a string of 81 digits or dashes.
-%%
-new(Setup) ->
-    Digits = to_digits(Setup),
-    Numbers = lists:seq(0, 80),
-    Zipped = lists:zip(Digits, Numbers),
-    lists:foldl(
-      fun ({Digit, Number}, This) ->
-	      case Digit of
-		  undefined ->
-		      This;
-		  _ ->
-		      place(This, Number, Digit)
-	      end
-      end,
-      new(),
-      Zipped).
+create_random_puzzle() ->
+    solve(new()).
 
-%% Given a Setup string, returns a list of numbers or undefined for
-%% each position.
+%% Try to solve this Puzzle and return a single solution.
 %%
-to_digits(Setup) ->
-    [case Char of
-	 $- ->
-	     undefined;
-	 _ ->
-	     Char - $0
-     end || Char <- Setup].
-
-%% Returns the position with the fewest possibilities.
-%%
-position_with_fewest_possibilities(This) when ?is_puzzle(This) ->
-    positions:min_by_possible_size(This#puzzle.positions).
-
-%% Returns a new Puzzle with Digit placed at Position AtNumber.  The
-%% possible sets of all Positions are updated to account for the new
-%% placement.
-%%
-place(This, AtNumber, Digit)
-  when ?is_puzzle(This), is_number(AtNumber), is_number(Digit) ->
-    Positions = This#puzzle.positions,
-    %% Place the Digit.
-    Positions2 = positions:update(
-		   Positions,
-		   AtNumber,
-		   fun (Position) -> position:place(Position, Digit) end),
-    %% Exclude Digit from excluded Positions.
-    ExclusionList = exclusions:get_list_for_position(
-		      This#puzzle.exclusions, AtNumber),
-    Positions3 = positions:do_exclusions(Positions2, Digit, ExclusionList),
-    This#puzzle{positions = Positions3}.
+solve(This) ->
+    [Solution] = solve(This, 1),
+    Solution.
 
 %% Try to solve this Puzzle and return up to Remaining possible solutions.
 %%
-solve(This, 0) when ?is_puzzle(This) ->
-    [];
-solve(This, Remaining) when ?is_puzzle(This) ->
+solve(This, Remaining) when ?is_puzzle(This), is_number(Remaining) ->
+    {Solutions, _Remaining} = solve(This, {[], Remaining}),
+    Solutions;
+solve(_This, Result = {_Solutions, _Remaining = 0}) when ?is_puzzle(_This) ->
+    Result;
+solve(This, Result = {Solutions, Remaining}) when ?is_puzzle(This) ->
     %% We get here either because we're done, we've failed, or we have
     %% to guess and recurse.  We can distinguish by examining the
     %% unplaced position with the fewest possibilities remaining.
 
-    MinPosition = position_with_fewest_possibilities(This),
-    Possible = position:get_possible(MinPosition),
-
-    case Possible == undefined of
-	true ->
+    case This#puzzle.unknown of
+	[] ->
             %% Solved.  Return This as a solution.
 	    stats:solved(),
-	    [This];
-	false ->
-	    case possible:size(Possible) of
-		0 ->
-		    %% Failed.  Return no solutions.
+	    {[This | Solutions], Remaining - 1};
+	Unknowns ->
+	    MinUnknown = unknown:min_by_num_possible(Unknowns),
+	    case unknown:possible(MinUnknown) of
+		[] ->
+		    %% Failed.  Return what we got so far.
 		    stats:failed(),
-		    [];
-		_ ->
-		    %% Found an unplaced position with two or more
+		    Result;
+		Possible ->
+		    %% Found an unknown cell with one or more
 		    %% possibilities.  Guess each possibility and
-		    %% recurse.
-		    stats:guess(),
-		    AtNumber = position:get_number(MinPosition),
-		    PossibleDigitList = possible:to_list(Possible),
-		    blah(This, AtNumber, Remaining, PossibleDigitList)
+		    %% recurse while Remaining != 0.
+		    case Possible of
+			[_] -> undefined;
+			_ -> stats:guess()
+		    end,
+		    do_guesses(This, Result, MinUnknown, util:shuffle(Possible))
 	    end
     end.
 
-blah(_This, _AtNumber, 0, _PossibleDigitList) ->
-    [];
-blah(_This, _AtNumber, _Remaining, []) ->
-    [];
-blah(This, AtNumber, Remaining, [PossibleDigit | T]) ->
-    Puzzle2 = puzzle:place(This, AtNumber, PossibleDigit),
-    Solutions = solve(Puzzle2, Remaining),
-    Solutions ++ blah(This, AtNumber, Remaining - length(Solutions), T).
+do_guesses(_This, Result, _Unknown, []) ->
+    Result;
+do_guesses(This, Result = {_Solutions, _Remaining}, Unknown, [Digit|Rest]) ->
+    Guess = place(This, Unknown, Digit),
+    Result2 = {_, Remaining2} = solve(Guess, Result),
+    case Remaining2 == 0 of
+	true ->
+	    Result2;
+	false ->
+	    do_guesses(This, Result2, Unknown, Rest)
+    end.
+
+%% Returns a new Puzzle with Digit placed in Cell CellNumber.  The
+%% possible sets of all Cells are updated to account for the new
+%% placement.
+%%
+place(This, CellNumber, Digit)
+  when is_number(CellNumber) ->
+    place(This, unknown:new(CellNumber), Digit);
+place(This, Unknown, Digit)
+  when ?is_puzzle(This), ?is_unknown(Unknown), is_number(Digit) ->
+    CellNumber = unknown:cell_number(Unknown),
+    Placed = [{CellNumber, Digit} | This#puzzle.placed],
+    Unknown2 = lists:filtermap(
+		 fun (E) ->
+			 case unknown:cell_number(E) /= CellNumber of
+			     true -> {true, unknown:place(E, Unknown, Digit)};
+			     false -> false
+			 end
+		 end,
+		 This#puzzle.unknown),
+    This#puzzle{placed = Placed, unknown = Unknown2}.
+
+remove(This, CellNumbers) when ?is_puzzle(This) ->
+    lists:foldl(
+      fun ({Number, Digit}, Puzzle) ->
+	      case lists:member(Number, CellNumbers) of
+		  true ->
+		      Puzzle;
+		  false ->
+		      place(Puzzle, Number, Digit)
+	      end
+      end,
+      new(),
+      This#puzzle.placed).
 
 %% Returns a raw string of 81 digits and dashes, like the argument to new.
 %%
 to_string(This) when ?is_puzzle(This) ->
-    positions:to_string(This#puzzle.positions).
+    Placed = [{Number, $0 + Digit} || {Number, Digit} <- This#puzzle.placed],
+    Unknown = [{unknown:cell_number(U), $-} || U <- This#puzzle.unknown],
+    All = Placed ++ Unknown,
+    Sorted = lists:sort(All),
+    [Char || {_, Char} <- Sorted].
 
 %% Returns a string that prints out as a grid of digits.
 %%
-to_puzzle(This) when ?is_puzzle(This) ->
+to_puzzle_string(This) when ?is_puzzle(This) ->
     String = to_string(This),
     string:join(
       lists:map(
@@ -128,8 +130,3 @@ to_puzzle(This) when ?is_puzzle(This) ->
 	end,
 	spud:slices(String, 27)),
       "\n\n").
-
-%% Prints the to_puzzle string.
-%%
-print_puzzle(This) when ?is_puzzle(This) ->
-    io:format("~s~n", [to_puzzle(This)]).

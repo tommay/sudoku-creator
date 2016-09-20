@@ -1,0 +1,2 @@
+-record(unknown, {cell_number, row, col, square, possible}).
+-define(is_unknown(Term), is_record(Term, unknown)).

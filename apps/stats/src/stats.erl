@@ -12,7 +12,7 @@
 
 -export([start_link/0]).
 -export([solved/0, failed/0, guess/0, reset/0,
-	 get/0, get_failed/0]).
+	 get/0, get_guess/0]).
 -export([to_string/1]).
 
 %% ------------------------------------------------------------------
@@ -41,8 +41,8 @@ start_link() ->
 get() ->
     gen_server:call(stats, get).
 
-get_failed() ->
-    gen_server:call(stats, get_failed).
+get_guess() ->
+    gen_server:call(stats, get_guess).
 
 to_string(Stats) ->
     spud:format("solved: ~w guess: ~w failed: ~w",
@@ -57,8 +57,8 @@ init(_Args) ->
 
 handle_call(get, _From, State) ->
     {reply, State, State};
-handle_call(get_failed, _From, State) ->
-    {reply, State#stats.failed, State}.
+handle_call(get_guess, _From, State) ->
+    {reply, State#stats.guess, State}.
 
 -define(handle(Msg),
 	handle_cast(Msg, State) ->
