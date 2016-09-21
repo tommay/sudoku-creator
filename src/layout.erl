@@ -30,10 +30,7 @@ uniq(List) ->
     uniq_by(fun (E) -> E end, List).
 
 uniq_by(Func, List) ->
-    Map = lists:foldl(
-	    fun (E, M) -> maps:put(Func(E), E, M) end,
-	    maps:new(),
-	    List),
+    Map = maps:from_list([{Func(E), E} || E <- List]),
     maps:values(Map).
 
 rowcol(N) ->
