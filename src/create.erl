@@ -1,10 +1,13 @@
 -module(create).
 -export([main/0]).
 
+style() ->
+    spinny.
+
 main() ->
     application:start(stats),
     application:start(rnd),
-    Puzzle = create_with_no_guessing(layout:layout(classic)),
+    Puzzle = create_with_no_guessing(layout:layout(style())),
     io:format("~s~n", [puzzle:to_puzzle_string(Puzzle)]).
 
 create_with_no_guessing(Layout) ->
